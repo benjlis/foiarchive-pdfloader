@@ -5,6 +5,7 @@ import requests
 import time
 import pdftotext
 import boto3
+import datetime
 
 PDFDIR = os.getenv('PDFDIR')
 SLEEP_DURATION = 45             # seconds
@@ -69,7 +70,8 @@ for p in pdfs:
                           char_cnt=char_cnt, body=page)
         pg += 1
     s3_status = upload_s3(pdf_file_path, 'foiarchive-un', 'moon/' + pdf_file)
-    print(f'{cnt=}, {id=}, {pdf_file=}, {http_status=}, {pdf_size=}, \
+    now = datetime.datetime.now().strftime('%m-%d %H:%M')
+    print(f'{now}, {cnt=}, {id=}, {pdf_file=}, {http_status=}, {pdf_size=}, \
 {pg_cnt=}, {s3_status=}')
     os.remove(pdf_file_path)
     time.sleep(SLEEP_DURATION)
