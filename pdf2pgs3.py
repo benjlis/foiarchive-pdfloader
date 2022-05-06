@@ -4,6 +4,7 @@ import os
 import requests
 import time
 import pdftotext
+import boto3
 
 PDFDIR = os.getenv('PDFDIR')
 SLEEP_DURATION = 45             # seconds
@@ -21,6 +22,29 @@ def download_pdf(url, dfile):
     return response.status_code
 
 
+def upload_s3(file_name, bucket, object_name=None):
+    """Upload a file to an S3 bucket
+
+    :param file_name: File to upload
+    :param bucket: Bucket to upload to
+    :param object_name: S3 object name. If not specified then file_name is used
+    :return: True if file was uploaded, else False
+    """
+
+    # If S3 object_name was not specified, use file_name
+    if object_name is None:
+        object_name = os.path.basename(file_name)
+
+    # Upload the file
+    s3_client = boto3.client('s3')
+    try:
+        s3_client.upload_file(file_name, bucket, object_name)
+    except Exception as e:
+        print(e)
+        return False
+    return True
+
+
 pdfs = stmts.get_pdf_list(conn)
 for p in pdfs:
     cnt = p[0]
@@ -28,6 +52,7 @@ for p in pdfs:
     pdf_url = p[2]
     http_status = None
     pdf_file = pdf_url.rsplit('/')[-1]
+    # pdf_file = pdf_file[:-3] + 'pdf'
     pdf_file_path = PDFDIR + pdf_file
     while http_status != 200:
         http_status = download_pdf(pdf_url, pdf_file_path)
@@ -40,17 +65,12 @@ for p in pdfs:
         for page in pdf:
             word_cnt = len(page.split())
             char_cnt = len(page)
-            # print(f'{cnt=}, {id=}, {pg=}, {word_cnt=}, {char_cnt=}')
-            # print(page)
             stmts.add_pdfpage(conn, oai_id=id, pg=pg, word_cnt=word_cnt,
                               char_cnt=char_cnt, body=page)
             pg += 1
+        s3_status = upload_s3(pdf_file_path, 'foiarchive-un',
+                              'moon/' + pdf_file)
         print(f'{cnt=}, {id=}, {pdf_file=}, {http_status=}, {pdf_size=}, \
-{pg_cnt=}')
+{pg_cnt=}, {s3_status=}')
+        os.remove(pdf_file_path)
         time.sleep(SLEEP_DURATION)
-
-# stmts.insert_email(conn, file_id=32, file_pg_start=1, pg_cnt=4,
-#                   header_begin_ln=2, header_end_ln=8, from_email='xx@abc.com',
-#                   to_emails='yyy@def.com', cc_emails='zzz@def.com',
-#                   attachments='a.pdf', importance='', subject='test email',
-#                   body='line1\nline2\nline3')
