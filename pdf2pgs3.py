@@ -8,7 +8,8 @@ import boto3
 import datetime
 
 PDFDIR = os.getenv('PDFDIR')
-SLEEP_DURATION = 45             # seconds
+SLEEP_DURATION_200 = 50       # seconds
+SLEEP_DURATION_429 = 65
 
 # db-related configuration
 conn = psycopg2.connect("")
@@ -31,11 +32,9 @@ def upload_s3(file_name, bucket, object_name=None):
     :param object_name: S3 object name. If not specified then file_name is used
     :return: True if file was uploaded, else False
     """
-
     # If S3 object_name was not specified, use file_name
     if object_name is None:
         object_name = os.path.basename(file_name)
-
     # Upload the file
     s3_client = boto3.client('s3')
     try:
@@ -57,6 +56,11 @@ for p in pdfs:
     pdf_file_path = PDFDIR + pdf_file
     while http_status != 200:
         http_status = download_pdf(pdf_url, pdf_file_path)
+        if http_status != 200:
+            print(f'Warning: {http_status=}')
+            time.sleep(SLEEP_DURATION_429)
+        else:
+            time.sleep(SLEEP_DURATION_200)
     pdf_size = os.stat(pdf_file_path).st_size
     with open(pdf_file_path, "rb") as f:
         pdf = pdftotext.PDF(f, physical=True)
@@ -70,8 +74,7 @@ for p in pdfs:
                           char_cnt=char_cnt, body=page)
         pg += 1
     s3_status = upload_s3(pdf_file_path, 'foiarchive-un', 'moon/' + pdf_file)
-    now = datetime.datetime.now().strftime('%m-%d %H:%M')
+    now = datetime.datetime.now().strftime('%m-%d %H:%M:%S')
     print(f'{now}, {cnt=}, {id=}, {pdf_file=}, {http_status=}, {pdf_size=}, \
 {pg_cnt=}, {s3_status=}')
     os.remove(pdf_file_path)
-    time.sleep(SLEEP_DURATION)
