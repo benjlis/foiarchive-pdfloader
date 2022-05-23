@@ -1,10 +1,11 @@
 -- name: get-pdf-list
 -- Get list of all pdfs that can be processed
-select row_number() over () , oai_id, pdf_url
-    from un_archives.metadata_load
-    where pdf_url is not null
-    order by oai_id
-    limit 5;
+select row_number() over () , m.oai_id, pdf_url
+    from un_archives.metadata_load m left join un_archives.pdfs p
+                                        on (m.oai_id = p.oai_id)
+    where pdf_url is not null and
+          p.oai_id is null
+    order by oai_id;
 
 -- name: add-pdf!
 -- Add row to pdfpages
