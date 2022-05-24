@@ -1,15 +1,24 @@
+import argparse
 import aiosql
 import psycopg2
 import os
 import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
-# import time
 import pdftotext
 import boto3
 import datetime
 
+# get environmental variables
 PDFDIR = os.getenv('PDFDIR')
+
+# process command line arguments
+parser = argparse.ArgumentParser(description='Downloads PDFs from a site and \
+loads text into DB and pushes a copy to s3')
+parser.add_argument('first_id', type=int, help='first oai_id in range')
+parser.add_argument('last_id', type=int, help='last oai_id in range')
+args = parser.parse_args()
+print(f'pdf2pgs3: processing ids between {args.first_id} and {args.last_id}')
 
 # db-related configuration
 conn = psycopg2.connect("")
@@ -49,7 +58,7 @@ def upload_s3(file_name, bucket, object_name=None):
     return True
 
 
-pdfs = stmts.get_pdf_list(conn)
+pdfs = stmts.get_pdf_list(conn, first_id=args.first_id, last_id=args.last_id)
 for p in pdfs:
     cnt = p[0]
     id = p[1]
