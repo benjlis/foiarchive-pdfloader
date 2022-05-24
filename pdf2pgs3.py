@@ -2,23 +2,27 @@ import aiosql
 import psycopg2
 import os
 import requests
-import time
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+# import time
 import pdftotext
 import boto3
 import datetime
 
 PDFDIR = os.getenv('PDFDIR')
-SLEEP_DURATION_200 = 50       # seconds
-SLEEP_DURATION_429 = 65
 
 # db-related configuration
 conn = psycopg2.connect("")
 conn.autocommit = True
 stmts = aiosql.from_path("pdf2pg.sql", "psycopg2")
 
+# establish requests session
+http = requests.Session()
+http.mount("https://", HTTPAdapter(max_retries=Retry(backoff_factor=90)))
+
 
 def download_pdf(url, dfile):
-    response = requests.get(url)
+    response = http.get(url)
     with open(dfile, 'wb') as f:
         f.write(response.content)
     return response.status_code
@@ -56,11 +60,6 @@ for p in pdfs:
     pdf_file_path = PDFDIR + pdf_file
     while http_status != 200:
         http_status = download_pdf(pdf_url, pdf_file_path)
-        if http_status != 200:
-            print(f'Warning: {http_status=}')
-            time.sleep(SLEEP_DURATION_429)
-        else:
-            time.sleep(SLEEP_DURATION_200)
     pdf_size = os.stat(pdf_file_path).st_size
     with open(pdf_file_path, "rb") as f:
         pdf = pdftotext.PDF(f, physical=True)
