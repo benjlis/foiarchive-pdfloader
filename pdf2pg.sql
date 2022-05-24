@@ -4,6 +4,7 @@ select row_number() over () , m.oai_id, pdf_url
     from un_archives.metadata_load m left join un_archives.pdfs p
                                         on (m.oai_id = p.oai_id)
     where pdf_url is not null and
+          m.oai_id between :first_id and :last_id and
           p.oai_id is null
     order by oai_id;
 
