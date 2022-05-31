@@ -26,12 +26,13 @@ conn.autocommit = True
 stmts = aiosql.from_path("pdf2pg.sql", "psycopg2")
 
 # establish requests session
+headers = {'User-Agent': 'unarms-requests'}
 http = requests.Session()
 http.mount("https://", HTTPAdapter(max_retries=Retry(backoff_factor=90)))
 
 
 def download_pdf(url, dfile):
-    response = http.get(url)
+    response = http.get(url, headers=headers)
     with open(dfile, 'wb') as f:
         f.write(response.content)
     return response.status_code
