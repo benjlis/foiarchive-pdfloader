@@ -71,19 +71,24 @@ for p in pdfs:
     while http_status != 200:
         http_status = download_pdf(pdf_url, pdf_file_path)
     pdf_size = os.stat(pdf_file_path).st_size
-    with open(pdf_file_path, "rb") as f:
-        pdf = pdftotext.PDF(f, physical=True)
-    pg_cnt = len(pdf)
-    stmts.add_pdf(conn, oai_id=id, pg_cnt=pg_cnt, size=pdf_size)
-    pg = 1
-    for page in pdf:
-        word_cnt = len(page.split())
-        char_cnt = len(page)
-        stmts.add_pdfpage(conn, oai_id=id, pg=pg, word_cnt=word_cnt,
-                          char_cnt=char_cnt, body=page)
-        pg += 1
-    s3_status = upload_s3(pdf_file_path, 'foiarchive-un', 'annan/' + pdf_file)
-    now = datetime.datetime.now().strftime('%m-%d %H:%M:%S')
-    print(f'{now}, {cnt=}, {id=}, {pdf_file=}, {http_status=}, {pdf_size=}, \
-{pg_cnt=}, {s3_status=}')
+    try:
+        with open(pdf_file_path, "rb") as f:
+            pdf = pdftotext.PDF(f, physical=True)
+        pg_cnt = len(pdf)
+        stmts.add_pdf(conn, oai_id=id, pg_cnt=pg_cnt, size=pdf_size)
+        pg = 1
+        for page in pdf:
+            word_cnt = len(page.split())
+            char_cnt = len(page)
+            stmts.add_pdfpage(conn, oai_id=id, pg=pg, word_cnt=word_cnt,
+                              char_cnt=char_cnt, body=page)
+            pg += 1
+        s3_status = upload_s3(pdf_file_path, 'foiarchive-un',
+                                             'annan/' + pdf_file)
+        now = datetime.datetime.now().strftime('%m-%d %H:%M:%S')
+        print(f'{now}, {cnt=}, {id=}, {pdf_file=}, {http_status=}, \
+{pdf_size=}, {pg_cnt=}, {s3_status=}')
+    except Exception as err:
+        print(f'Error - {cnt=}, {id=}')
+        print(f'Unexpected {err=}, {type(err)=}')
     os.remove(pdf_file_path)
