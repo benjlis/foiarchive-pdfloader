@@ -82,7 +82,7 @@ for p in pdfs:
         stmts.add_pdfpage(conn, oai_id=id, pg=pg, word_cnt=word_cnt,
                           char_cnt=char_cnt, body=page)
         pg += 1
-    s3_status = upload_s3(pdf_file_path, 'foiarchive-un', 'moon/' + pdf_file)
+    s3_status = upload_s3(pdf_file_path, 'foiarchive-un', 'annan/' + pdf_file)
     now = datetime.datetime.now().strftime('%m-%d %H:%M:%S')
     print(f'{now}, {cnt=}, {id=}, {pdf_file=}, {http_status=}, {pdf_size=}, \
 {pg_cnt=}, {s3_status=}')
