@@ -5,9 +5,11 @@ import os
 import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
 import pdftotext
 import boto3
 import datetime
+import time
 
 # get environmental variables
 PDFDIR = os.getenv('PDFDIR')
@@ -26,13 +28,16 @@ conn.autocommit = True
 stmts = aiosql.from_path("pdf2pg.sql", "psycopg2")
 
 # establish requests session
-headers = {'User-Agent': 'unarms-requests'}
+# headers = {'User-Agent': 'unarms-requests'}
+headers = ''
+# added for NATO
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 http = requests.Session()
-http.mount("https://", HTTPAdapter(max_retries=Retry(backoff_factor=90)))
+http.mount("https://", HTTPAdapter(max_retries=Retry(backoff_factor=1)))
 
 
 def download_pdf(url, dfile):
-    response = http.get(url, headers=headers)
+    response = http.get(url, headers=headers, verify=False)
     with open(dfile, 'wb') as f:
         f.write(response.content)
     return response.status_code
@@ -70,21 +75,22 @@ for p in pdfs:
     pdf_file_path = PDFDIR + pdf_file
     while http_status != 200:
         http_status = download_pdf(pdf_url, pdf_file_path)
+        # print(f"return from download pdf, {http_status}=")
+        # print(f"{pdf_url=}, {pdf_file_path=}")
     pdf_size = os.stat(pdf_file_path).st_size
     try:
         with open(pdf_file_path, "rb") as f:
             pdf = pdftotext.PDF(f, physical=True)
         pg_cnt = len(pdf)
-        stmts.add_pdf(conn, oai_id=id, pg_cnt=pg_cnt, size=pdf_size)
+        stmts.add_pdf(conn, id=id, pg_cnt=pg_cnt, size=pdf_size)
         pg = 1
         for page in pdf:
             word_cnt = len(page.split())
             char_cnt = len(page)
-            stmts.add_pdfpage(conn, oai_id=id, pg=pg, word_cnt=word_cnt,
+            stmts.add_pdfpage(conn, id=id, pg=pg, word_cnt=word_cnt,
                               char_cnt=char_cnt, body=page)
             pg += 1
-        s3_status = upload_s3(pdf_file_path, 'foiarchive-un',
-                                             'annan/' + pdf_file)
+        s3_status = upload_s3(pdf_file_path, 'foiarchive-nato', pdf_file)
         now = datetime.datetime.now().strftime('%m-%d %H:%M:%S')
         print(f'{now}, {cnt=}, {id=}, {pdf_file=}, {http_status=}, \
 {pdf_size=}, {pg_cnt=}, {s3_status=}')
