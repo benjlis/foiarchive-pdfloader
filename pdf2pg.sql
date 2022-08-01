@@ -1,20 +1,15 @@
 -- name: get-pdf-list
 -- Get list of all pdfs that can be processed
-select row_number() over () , el.hlid, el.digitalobjecturi
-    from nato_archives.export_load el
-    where digitalobjecturi is not null and
-          identifier is not null and
-          hlid between :first_id and :last_id and
-          (culture = 'en' or
-           (culture = 'fr' and
-            not exists (select 1 from nato_archives.export_load
-                           where culture = 'en' and
-                                 identifier = el.identifier)))
-    order by hlid;
+select row_number() over (order by item_id), i.item_id, i.pdf_url
+    from nato_archives.items i
+    where item_id between :first_id and :last_id and
+          not exists (select 1 from nato_archives.pdfs
+                         where item_id = i.item_id)
+    order by item_id;
 -- name: add-pdf!
 -- Add row to pdfpages
-insert into nato_archives.pdfs(item_id, pg_cnt, size)
-values (:id, :pg_cnt, :size);
+insert into nato_archives.pdfs(item_id, filename, pg_cnt, size)
+values (:id, :pdf_file, :pg_cnt, :size);
 
 -- name: add-pdfpage!
 -- Add row to pdfpages
