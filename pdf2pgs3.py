@@ -82,7 +82,8 @@ for p in pdfs:
         with open(pdf_file_path, "rb") as f:
             pdf = pdftotext.PDF(f, physical=True)
         pg_cnt = len(pdf)
-        stmts.add_pdf(conn, id=id, pg_cnt=pg_cnt, size=pdf_size)
+        stmts.add_pdf(conn, id=id, pdf_file=pdf_file, pg_cnt=pg_cnt,
+                      size=pdf_size)
         pg = 1
         for page in pdf:
             word_cnt = len(page.split())
