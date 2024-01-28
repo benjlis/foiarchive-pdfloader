@@ -9,7 +9,7 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 import pdftotext
 import boto3
 import datetime
-import time
+
 
 # get environmental variables
 PDFDIR = os.getenv('PDFDIR')
@@ -91,7 +91,8 @@ for p in pdfs:
             stmts.add_pdfpage(conn, id=id, pg=pg, word_cnt=word_cnt,
                               char_cnt=char_cnt, body=page)
             pg += 1
-        s3_status = upload_s3(pdf_file_path, 'foiarchive-nato', pdf_file)
+        s3_status = upload_s3(pdf_file_path, 'foiarchive-covid-19',
+                              'dcml/' + pdf_file)
         now = datetime.datetime.now().strftime('%m-%d %H:%M:%S')
         print(f'{now}, {cnt=}, {id=}, {pdf_file=}, {http_status=}, \
 {pdf_size=}, {pg_cnt=}, {s3_status=}')
